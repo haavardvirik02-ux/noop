@@ -45,6 +45,41 @@ final class WidgetSnapshotTests: XCTestCase {
         )
     }
 
+    func testSideloadlyProfileGroupWinsWithoutAltStoreKey() {
+        XCTAssertEqual(
+            WidgetSnapshot.resolveSuiteName(
+                infoDictionary: ["AppGroupIdentifier": "group.com.noopapp.noop.staging"],
+                provisionedGroups: ["group.com.noopapp.noop.staging.RGA8MQSJB6"]
+            ),
+            "group.com.noopapp.noop.staging.RGA8MQSJB6"
+        )
+    }
+
+    func testXcodeProfileGrantingConfiguredGroupKeepsIt() {
+        XCTAssertEqual(
+            WidgetSnapshot.resolveSuiteName(
+                infoDictionary: ["AppGroupIdentifier": "group.example.noop"],
+                provisionedGroups: ["group.example.noop"]
+            ),
+            "group.example.noop"
+        )
+    }
+
+    func testAppGroupsAreReadFromProvisioningProfileEnvelope() {
+        let plist = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <plist version="1.0"><dict><key>Entitlements</key><dict>
+        <key>com.apple.security.application-groups</key>
+        <array><string>group.example.noop.TEAM123456</string></array>
+        </dict></dict></plist>
+        """
+        let profile = Data([0x30, 0x82, 0x00]) + Data(plist.utf8) + Data([0xA0, 0x82])
+
+        XCTAssertEqual(WidgetSnapshot.appGroups(fromProvisioningProfile: profile),
+                       ["group.example.noop.TEAM123456"])
+        XCTAssertEqual(WidgetSnapshot.appGroups(fromProvisioningProfile: Data([0x30, 0x82])), [])
+    }
+
     func testRuntimeUnavailableSnapshotContainsNoDemoValues() {
         let snapshot = WidgetSnapshot.unavailable
 
